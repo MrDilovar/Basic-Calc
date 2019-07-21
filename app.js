@@ -1,6 +1,6 @@
 var app = {
 	arInput: [{
-		value: 0,
+		value: '0',
 		type: 'number'
 	}],
 	add: function(a, b) {
@@ -17,12 +17,18 @@ var app = {
 	},
 	equal: function() {
 		var arInput = this.arInput;
+		var arInputLength = 0;
+
+		for (var i = 0; i < arInput.length; i++) {
+			if (arInput[i].type === 'operation') arInputLength++
+		}
+
 
 		if (arInput[arInput.length - 1].type === 'operation') {
 			arInput.pop();
 		}
 
-		while(arInput.length > 1) {
+		for (var j = 0; j < arInputLength; j++) {
 
 			for (var i = 0; i < arInput.length; i++) {
 				switch(arInput[i].value) {
@@ -52,21 +58,16 @@ var app = {
 		firstOperand = + arInput[index - 1].value,
 		secondOperand = + (arInput[index + 1] ? arInput[index + 1].value : 0);
 		
-		arInput[index - 1].value = func(firstOperand, secondOperand);
+		arInput[index - 1].value = func(firstOperand, secondOperand) + '';
 		arInput.splice(index, index + 1);
 	},
 	renderWindow: function() {
 		var calcWindow = document.getElementById('calcWindow'),
-		text = '',
-		arInput = this.arInput;
+		text = '';
 		
-		if (arInput.length === 0) {
-			text = '0';
-		} else {
-			for (var i = 0; i < arInput.length; i++) {
-				text += arInput[i].value; 
-			}		
-		}
+		for (var i = 0; i < this.arInput.length; i++) {
+			text += this.arInput[i].value; 
+		}		
 
 		calcWindow.innerHTML = text;
 	},
@@ -211,11 +212,13 @@ var app = {
 									command: true
 								}
 							}),
+							,
 							ct({
 								a: [[, 'column']],
-								i: '=',
+								i: '<--',
 								d: {
-									value: '=',
+									value: 'clearOne',
+									type: 'back',
 									command: true
 								}
 							}),
@@ -226,7 +229,33 @@ var app = {
 									value: 'C',
 									command: true
 								}
-							})
+							}),
+							ct({
+								a: [[, 'column']],
+								i: '0',
+								d: {
+									value: '0',
+									type: 'number',
+									command: true
+								}
+							}),
+							ct({
+								a: [[, 'column']],
+								i: '.',
+								d: {
+									value: '.',
+									type: 'point',
+									command: true
+								}
+							}),
+							ct({
+								a: [[, 'column']],
+								i: '=',
+								d: {
+									value: '=',
+									command: true
+								}
+							}),
 						]
 					})
 				]
@@ -239,6 +268,19 @@ var app = {
 		var lastElement = arInput[arInput.length - 1];
 
 		switch(inp.value) {
+			case '0':
+				if (lastElement.value !== '0') {
+					if (lastElement.type !== 'operation') {
+						lastElement.value += inp.value;
+					} else {
+						arInput.push({
+							value: inp.value,
+							type: inp.type
+						});
+					}
+				}
+
+				break;
 			case '1':
 			case '2':
 			case '3':
@@ -248,10 +290,12 @@ var app = {
 			case '7':
 			case '8':
 			case '9':
-				if (arInput.length === 1 && lastElement.value === 0) {
+				if (arInput.length === 1 && lastElement.value === '0') {
 					lastElement.value = inp.value;
 				} else if (lastElement.type === inp.type) {
-					lastElement.value += inp.value;
+					if (lastElement.value >= -32767  && lastElement.value <= 32767) {
+						lastElement.value += inp.value;
+					}
 				} else {
 					arInput.push({
 						value: inp.value,
@@ -274,14 +318,37 @@ var app = {
 				}
 
 				break;
+			case '.':
+				if (lastElement.type === 'number' && lastElement.value.indexOf('.') < 0) {
+					lastElement.value += inp.value;
+				}
+
+				break;
+			case 'clearOne':
+				if (lastElement.type === 'operation') {
+					arInput.pop();
+				} else if(lastElement.type === 'number') {
+					if (arInput.length === 1 && lastElement.value.length === 1) {
+						lastElement.value = '0';
+					} else if (lastElement.value.length > 1) {
+						lastElement.value = lastElement.value.slice(0, -1);
+					} else {
+						arInput.pop();
+					}
+				}
+
+				break;
 			case 'C':
 				this.arInput = [{
-					value: 0,
+					value: '0',
 					taype: 'number'
 				}];
+
 				break;
 			case '=':
 				this.equal();
+
+				break;
 		}
 
 		this.renderWindow();
